@@ -1,7 +1,10 @@
 package EventPass;
 
 import jakarta.annotation.PostConstruct;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 @RestController
@@ -11,42 +14,102 @@ public class ApiController {
 
     private final EventRepository eventRepo;
     private final RegistrationRepository regRepo;
+    private final UserRepository userRepo;
 
-    // Dependency Injection: Spring automatically hands us the database repositories
-    public ApiController(EventRepository eventRepo, RegistrationRepository regRepo) {
+    public ApiController(EventRepository eventRepo, RegistrationRepository regRepo, UserRepository userRepo) {
         this.eventRepo = eventRepo;
         this.regRepo = regRepo;
+        this.userRepo = userRepo;
     }
 
-    // Runs automatically on startup: seeds initial data if the database is empty
     @PostConstruct
     public void seedData() {
-        if (eventRepo.count() == 0) {
-            Event e1 = eventRepo.save(new Event("Cloud Native & Kubernetes Summit", "2026-11-14 • 09:00",
-                    "UM6P Congress Center, Benguerir", "INFRASTRUCTURE", 150));
-            Event e2 = eventRepo.save(new Event("AI Systems & Vector DB Workshop", "2026-11-28 • 14:30",
-                    "Technopark Auditorium, Rabat", "AI / ML", 80));
-            Event e3 = eventRepo.save(new Event("Zero-Trust Security Architecture", "2026-12-05 • 10:00",
-                    "Remote / Live Stream", "SECURITY", 300));
+        if (userRepo.count() == 0) {
+            userRepo.save(new User(
+                    "Pr. Admin UIT (Département Info)",
+                    "admin@uit.ac.ma",
+                    "admin123",
+                    "ADMIN",
+                    "ADMIN-FSK"));
+            userRepo.save(new User(
+                    "Mohammed Nassiri",
+                    "mohammed.nassiri@uit.ac.ma",
+                    "student123",
+                    "STUDENT",
+                    "M-CLOUD-2026"));
+        }
 
-            regRepo.save(new Registration("Amine El Idrissi", "amine@cloud.ma", "VIP Speaker", e1));
-            regRepo.save(new Registration("Sarah Benali", "sarah.b@dev.io", "Cloud Architect", e1));
+        if (eventRepo.count() == 0) {
+            Event e1 = eventRepo.save(new Event(
+                    "Journée Cloud Native, Kubernetes & Microservices",
+                    "24 Nov 2026 • 09:00",
+                    "Amphi Central — Faculté des Sciences, Kénitra",
+                    "MASTER CLOUD & J2EE",
+                    120));
+            Event e2 = eventRepo.save(new Event(
+                    "Séminaire IA Générative & Architectures Distribuées",
+                    "02 Déc 2026 • 14:30",
+                    "Centre de Conférences — Université Ibn Tofaïl",
+                    "RECHERCHE & IA",
+                    80));
+            Event e3 = eventRepo.save(new Event(
+                    "Forum Entreprises, Cloud & Stages PFE 2026",
+                    "15 Déc 2026 • 09:30",
+                    "Hall Principal — Campus Universitaire UIT Kénitra",
+                    "CARRIÈRE & PFE",
+                    250));
+            Event e4 = eventRepo.save(new Event(
+                    "Workshop DevSecOps & Automatisation CI/CD",
+                    "22 Déc 2026 • 10:00",
+                    "Salle TP B4 — Département d'Informatique",
+                    "WORKSHOP PRATIQUE",
+                    40));
+
+            regRepo.save(new Registration("Mohammed Nassiri", "mohammed.nassiri@uit.ac.ma", "Master Cloud Engineering",
+                    "M-CLOUD-2026", e1));
+            regRepo.save(new Registration("Yassine Esserdaoui", "yassine.e@uit.ac.ma", "Master Cloud Engineering",
+                    "M-CLOUD-2029", e1));
+            regRepo.save(new Registration("Salma El Amrani", "salma.elamrani@uit.ac.ma", "Doctorante Labo Info",
+                    "DOC-UIT-104", e2));
         }
     }
 
-    // 1. Get all events
+    // --- AUTHENTICATION ENDPOINTS ---
+
+    @PostMapping("/auth/login")
+    public User login(@RequestBody User credentials) {
+        User user = userRepo.findByEmailIgnoreCase(credentials.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants introuvables"));
+        if (!user.getPassword().equals(credentials.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mot de passe incorrect");
+        }
+        return user;
+    }
+
+    @PostMapping("/auth/signup")
+    public User signup(@RequestBody User newUser) {
+        if (userRepo.findByEmailIgnoreCase(newUser.getEmail()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cet email UIT est déjà inscrit");
+        }
+        newUser.setRole("STUDENT");
+        if (newUser.getStudentId() == null || newUser.getStudentId().isBlank()) {
+            newUser.setStudentId("ETU-" + (1000 + userRepo.count()));
+        }
+        return userRepo.save(newUser);
+    }
+
+    // --- EVENTS ENDPOINTS ---
+
     @GetMapping("/events")
     public List<Event> getAllEvents() {
         return eventRepo.findAll();
     }
 
-    // 2. Create a new event
     @PostMapping("/events")
     public Event createEvent(@RequestBody Event event) {
         return eventRepo.save(event);
     }
 
-    // 3. Delete an event
     @DeleteMapping("/events/{id}")
     public void deleteEvent(@PathVariable Long id) {
         List<Registration> regs = regRepo.findByEventId(id);
@@ -54,20 +117,45 @@ public class ApiController {
         eventRepo.deleteById(id);
     }
 
-    // 4. Get all registered badges (or filter by event)
+    // --- REGISTRATIONS & BADGES ENDPOINTS ---
+
     @GetMapping("/registrations")
-    public List<Registration> getRegistrations(@RequestParam(required = false) Long eventId) {
+    public List<Registration> getRegistrations(
+            @RequestParam(required = false) Long eventId,
+            @RequestParam(required = false) String email) {
+        if (email != null && !email.isBlank()) {
+            return regRepo.findByEmailIgnoreCase(email);
+        }
         if (eventId != null) {
             return regRepo.findByEventId(eventId);
         }
         return regRepo.findAll();
     }
 
-    // 5. Register a participant and generate their badge
     @PostMapping("/events/{eventId}/register")
     public Registration register(@PathVariable Long eventId, @RequestBody Registration req) {
         Event event = eventRepo.findById(eventId).orElseThrow();
-        Registration newBadge = new Registration(req.getFullName(), req.getEmail(), req.getRole(), event);
+
+        // Check if student is already registered for this event
+        var existing = regRepo.findByEventIdAndEmailIgnoreCase(eventId, req.getEmail());
+        if (existing.isPresent()) {
+            return existing.get(); // Return their existing badge seamlessly
+        }
+
+        String role = (req.getRole() == null || req.getRole().isBlank()) ? "Master Cloud Engineering" : req.getRole();
+        String studentId = (req.getStudentId() == null || req.getStudentId().isBlank()) ? "UIT-ETU"
+                : req.getStudentId();
+
+        Registration newBadge = new Registration(req.getFullName(), req.getEmail(), role, studentId, event);
         return regRepo.save(newBadge);
+    }
+
+    // Admin QR Code / Badge Verification & Check-In
+    @PostMapping("/badges/verify/{badgeCode}")
+    public Registration verifyAndCheckIn(@PathVariable String badgeCode) {
+        Registration reg = regRepo.findByBadgeCodeIgnoreCase(badgeCode.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Badge invalide ou introuvable"));
+        reg.setCheckedIn(true);
+        return regRepo.save(reg);
     }
 }

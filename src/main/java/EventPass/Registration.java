@@ -12,10 +12,11 @@ public class Registration {
 
     private String fullName;
     private String email;
-    private String role; // e.g., "VIP", "Speaker", "Attendee"
+    private String role;
+    private String studentId;
     private String badgeCode;
+    private boolean checkedIn = false;
 
-    // Foreign Key: Links many Registrations to one Event
     @ManyToOne
     @JoinColumn(name = "event_id")
     private Event event;
@@ -23,13 +24,14 @@ public class Registration {
     public Registration() {
     }
 
-    public Registration(String fullName, String email, String role, Event event) {
+    public Registration(String fullName, String email, String role, String studentId, Event event) {
         this.fullName = fullName;
         this.email = email;
         this.role = role;
+        this.studentId = studentId;
         this.event = event;
-        // Automatically generate a unique 6-character cryptographic badge ID
-        this.badgeCode = "PASS-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        this.checkedIn = false;
+        this.badgeCode = "UIT-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
     public Long getId() {
@@ -64,12 +66,28 @@ public class Registration {
         this.role = role;
     }
 
+    public String getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+
     public String getBadgeCode() {
         return badgeCode;
     }
 
     public void setBadgeCode(String badgeCode) {
         this.badgeCode = badgeCode;
+    }
+
+    public boolean isCheckedIn() {
+        return checkedIn;
+    }
+
+    public void setCheckedIn(boolean checkedIn) {
+        this.checkedIn = checkedIn;
     }
 
     public Event getEvent() {

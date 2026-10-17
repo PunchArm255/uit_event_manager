@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Étudiant — UIT EventPass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- QRious: Reliable Canvas QR Generator (Zero DOM Crashes) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FAFAFA; color: #111827; }
+        .uit-logo-tint {
+            filter: brightness(0) saturate(100%) invert(12%) sepia(83%) saturate(4737%) hue-rotate(216deg) brightness(90%) contrast(105%);
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased pb-20">
+
+    <!-- Clean White Top Bar -->
+    <header class="bg-white border-b border-neutral-200">
+        <div class="max-w-4xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="/index.html" class="flex items-center gap-3">
+                <img src="/uit-logo.png" alt="UIT" class="h-10 w-auto object-contain uit-logo-tint" onerror="this.style.display='none'">
+            </a>
+            <div class="flex items-center gap-5">
+                <div class="text-right">
+                    <div id="userName" class="text-sm font-semibold text-neutral-900">Étudiant</div>
+                    <div id="userMeta" class="text-xs text-neutral-500">Master GLCC</div>
+                </div>
+                <button onclick="logout()" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-medium px-3.5 py-2 rounded-lg transition">
+                    Déconnexion
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto px-6 pt-10">
+        
+        <!-- Section Header & Simple Tabs -->
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b border-neutral-200 pb-5 mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-neutral-900">Programme des Conférences</h1>
+                <p class="text-sm text-neutral-500 mt-1">Inscrivez-vous aux événements et téléchargez vos badges d'accès.</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="tabAgenda" onclick="switchTab('agenda')" class="bg-[#002B7F] text-white text-xs font-medium px-4 py-2 rounded-lg transition">
+                    Agenda UIT
+                </button>
+                <button id="tabPasses" onclick="switchTab('passes')" class="bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 text-xs font-medium px-4 py-2 rounded-lg transition">
+                    Mes Badges (<span id="passCount">0</span>)
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 1: Editorial Single-Column Event Feed (No Grid) -->
+        <div id="agendaView" class="divide-y divide-neutral-200 bg-white border border-neutral-200 rounded-2xl overflow-hidden"></div>
+
+        <!-- VIEW 2: Personal Passes List -->
+        <div id="passesView" class="hidden space-y-3"></div>
+
+    </main>
+
+    <!-- CLEAN FLAT BADGE MODAL -->
+    <div id="badgeModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+        <div class="flex flex-col items-center">
+            
+            <!-- Printable White Minimalist Badge -->
+            <div id="printableBadge" class="w-80 bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-xl text-neutral-900">
+                <!-- Solid UIT Blue Top Accent Bar -->
+                <div class="bg-[#002B7F] px-6 py-4 flex items-center justify-between text-white">
+                    <div>
+                        <div class="text-[10px] uppercase tracking-widest opacity-80">Université Ibn Tofaïl</div>
+                        <div class="text-sm font-bold">Badge d'Accès Officiel</div>
+                    </div>
+                    <span id="modalStatus" class="text-[10px] font-semibold uppercase bg-white/20 px-2.5 py-1 rounded">
+                        VALIDE
+                    </span>
+                </div>
+
+                <div class="p-6">
+                    <div id="modalCategory" class="text-[11px] font-semibold uppercase tracking-wider text-[#002B7F]">CONFÉRENCE</div>
+                    <h3 id="modalEventTitle" class="text-base font-bold text-neutral-900 mt-1 leading-snug">Titre de l'événement</h3>
+                    <p id="modalEventMeta" class="text-xs text-neutral-500 mt-1">Date & Lieu</p>
+
+                    <div class="border-t border-neutral-200 my-5"></div>
+
+                    <div class="mb-5">
+                        <div class="text-[10px] uppercase tracking-wider text-neutral-400">Participant</div>
+                        <div id="modalHolderName" class="text-base font-bold text-neutral-900 mt-0.5">Nom Complet</div>
+                        <div id="modalHolderMeta" class="text-xs text-neutral-500">Email</div>
+                    </div>
+
+                    <!-- Reliable Canvas QR Code -->
+                    <div class="bg-neutral-50 border border-neutral-200 rounded-xl p-4 flex flex-col items-center justify-center">
+                        <canvas id="qrCanvas" width="150" height="150"></canvas>
+                        <div id="modalBadgeCode" class="text-xs font-bold tracking-widest text-neutral-800 mt-3">UIT-XXXXXX</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Buttons -->
+            <div class="flex items-center gap-3 mt-5">
+                <button onclick="downloadBadge()" class="bg-[#002B7F] hover:bg-[#001F5C] text-white text-xs font-medium px-5 py-2.5 rounded-lg transition">
+                    Télécharger en PNG
+                </button>
+                <button onclick="closeBadgeModal()" class="bg-white hover:bg-neutral-100 text-neutral-800 text-xs font-medium px-5 py-2.5 rounded-lg transition">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem('uit_user') || 'null');
+        if (!user) window.location.href = '/login.html';
+
+        document.getElementById('userName').textContent = user.fullName;
+        document.getElementById('userMeta').textContent = `${user.studentId || 'Étudiant UIT'} • ${user.email}`;
+
+        let events = [];
+        let allRegs = [];
+        let myPasses = [];
+
+        async function loadData() {
+            const [evRes, allRes, myRes] = await Promise.all([
+                fetch('/api/events'),
+                fetch('/api/registrations'),
+                fetch(`/api/registrations?email=${encodeURIComponent(user.email)}`)
+            ]);
+            events = await evRes.json();
+            allRegs = await allRes.json();
+            myPasses = await myRes.json();
+
+            document.getElementById('passCount').textContent = myPasses.length;
+            renderAgenda();
+            renderPasses();
+        }
+
+        function renderAgenda() {
+            const container = document.getElementById('agendaView');
+            if (events.length === 0) {
+                container.innerHTML = `<div class="p-12 text-center text-sm text-neutral-500">Aucun événement programmé pour le moment.</div>`;
+                return;
+            }
+
+            container.innerHTML = events.map(ev => {
+                const myPass = myPasses.find(p => p.event && p.event.id === ev.id);
+                const count = allRegs.filter(r => r.event && r.event.id === ev.id).length;
+                const parts = (ev.date || '').split('•');
+                const datePart = parts[0] ? parts[0].trim() : ev.date;
+                const timePart = parts[1] ? parts[1].trim() : '';
+
+                return `
+                    <div class="p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-6 hover:bg-neutral-50/70 transition">
+                        <!-- Left: Date Column -->
+                        <div class="sm:w-36 shrink-0">
+                            <div class="text-sm font-bold text-[#002B7F]">${datePart}</div>
+                            <div class="text-xs text-neutral-500 mt-0.5">${timePart}</div>
+                        </div>
+
+                        <!-- Middle: Event Info -->
+                        <div class="flex-1">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">${ev.category}</div>
+                            <h3 class="text-base font-bold text-neutral-900">${ev.title}</h3>
+                            <p class="text-xs text-neutral-500 mt-1">${ev.location} &nbsp;•&nbsp; ${count} / ${ev.capacity} inscrits</p>
+                        </div>
+
+                        <!-- Right: Action Button -->
+                        <div class="shrink-0">
+                            ${myPass ? `
+                                <button onclick="openBadgeById(${myPass.id})" class="bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium px-4 py-2.5 rounded-lg transition">
+                                    Voir mon badge QR
+                                </button>
+                            ` : `
+                                <button onclick="registerForEvent(${ev.id})" class="bg-[#002B7F] hover:bg-[#001F5C] text-white text-xs font-medium px-4 py-2.5 rounded-lg transition">
+                                    S'inscrire
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPasses() {
+            const container = document.getElementById('passesView');
+            if (myPasses.length === 0) {
+                container.innerHTML = `<div class="bg-white border border-neutral-200 rounded-2xl p-12 text-center text-sm text-neutral-500">Vous n'avez aucun badge pour le moment.</div>`;
+                return;
+            }
+
+            container.innerHTML = myPasses.map(p => `
+                <div class="bg-white border border-neutral-200 rounded-xl p-5 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-[#002B7F]">${p.badgeCode}</span>
+                        <h4 class="text-base font-bold text-neutral-900 mt-0.5">${p.event ? p.event.title : 'Événement UIT'}</h4>
+                        <p class="text-xs text-neutral-500 mt-0.5">${p.event ? p.event.date + ' — ' + p.event.location : ''}</p>
+                    </div>
+                    <button onclick="openBadgeById(${p.id})" class="bg-[#002B7F] hover:bg-[#001F5C] text-white text-xs font-medium px-4 py-2.5 rounded-lg transition">
+                        Afficher le QR
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function registerForEvent(eventId) {
+            const res = await fetch(`/api/events/${eventId}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullName: user.fullName,
+                    email: user.email,
+                    role: "Master GLCC",
+                    studentId: user.studentId || "M-GLCC"
+                })
+            });
+            const newBadge = await res.json();
+            await loadData();
+            showBadgeModal(newBadge);
+        }
+
+        function openBadgeById(passId) {
+            const found = myPasses.find(p => p.id === passId);
+            if (found) showBadgeModal(found);
+        }
+
+        function showBadgeModal(badge) {
+            document.getElementById('modalStatus').textContent = badge.checkedIn ? 'PRÉSENCE VALIDÉE' : 'VALIDE';
+            document.getElementById('modalCategory').textContent = badge.event ? badge.event.category : 'UNIVERSITÉ IBN TOFAÏL';
+            document.getElementById('modalEventTitle').textContent = badge.event ? badge.event.title : 'Conférence UIT';
+            document.getElementById('modalEventMeta').textContent = badge.event ? `${badge.event.date} • ${badge.event.location}` : '';
+            document.getElementById('modalHolderName').textContent = badge.fullName;
+            document.getElementById('modalHolderMeta').textContent = `${badge.studentId || ''} • ${badge.email}`;
+            document.getElementById('modalBadgeCode').textContent = badge.badgeCode;
+
+            // Render QR Code onto Canvas via QRious
+            new QRious({
+                element: document.getElementById('qrCanvas'),
+                value: JSON.stringify({
+                    code: badge.badgeCode,
+                    name: badge.fullName,
+                    event: badge.event ? badge.event.title : 'UIT'
+                }),
+                size: 150,
+                foreground: '#002B7F',
+                background: '#FFFFFF',
+                level: 'M'
+            });
+
+            const modal = document.getElementById('badgeModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeBadgeModal() {
+            const modal = document.getElementById('badgeModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function downloadBadge() {
+            const el = document.getElementById('printableBadge');
+            const code = document.getElementById('modalBadgeCode').textContent;
+            const canvas = await html2canvas(el, { scale: 2 });
+            const a = document.createElement('a');
+            a.download = `${code}.png`;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+        }
+
+        function switchTab(tab) {
+            const isAgenda = tab === 'agenda';
+            document.getElementById('agendaView').classList.toggle('hidden', !isAgenda);
+            document.getElementById('passesView').classList.toggle('hidden', isAgenda);
+
+            document.getElementById('tabAgenda').className = isAgenda
+                ? 'bg-[#002B7F] text-white text-xs font-medium px-4 py-2 rounded-lg transition'
+                : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 text-xs font-medium px-4 py-2 rounded-lg transition';
+
+            document.getElementById('tabPasses').className = !isAgenda
+                ? 'bg-[#002B7F] text-white text-xs font-medium px-4 py-2 rounded-lg transition'
+                : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 text-xs font-medium px-4 py-2 rounded-lg transition';
+        }
+
+        function logout() {
+            localStorage.removeItem('uit_user');
+            window.location.href = '/index.html';
+        }
+
+        loadData();
+    </script>
+</body>
+</html>

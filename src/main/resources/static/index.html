@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIT EventPass — Université Ibn Tofaïl</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FAFAFA; color: #111827; }
+        /* If your transparent uit-logo.png is white, this filter makes it UIT Royal Blue (#002B7F). 
+           If your PNG is already blue, delete the filter line below! */
+        .uit-logo-tint {
+            filter: brightness(0) saturate(100%) invert(12%) sepia(83%) saturate(4737%) hue-rotate(216deg) brightness(90%) contrast(105%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased">
+
+    <!-- Minimal Header -->
+    <header class="w-full max-w-5xl mx-auto px-6 py-8 flex items-center justify-between">
+        <a href="/index.html" class="flex items-center gap-3">
+            <img src="/uit-logo.png" alt="Université Ibn Tofaïl" class="h-12 w-auto object-contain uit-logo-tint" onerror="this.style.display='none'">
+        </a>
+        <nav class="flex items-center gap-6">
+            <button onclick="openAboutModal()" class="text-sm font-medium text-neutral-600 hover:text-[#002B7F] transition">
+                À propos
+            </button>
+            <a href="/login.html" class="bg-[#002B7F] hover:bg-[#001F5C] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition">
+                Se connecter
+            </a>
+        </nav>
+    </header>
+
+    <!-- Pure Minimalist Center Content -->
+    <main class="max-w-3xl mx-auto px-6 py-16 text-center">
+        <p class="text-xs font-semibold uppercase tracking-widest text-[#002B7F] mb-4">
+            Université Ibn Tofaïl • Kénitra
+        </p>
+        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 leading-tight mb-6">
+            Portail des conférences et événements universitaires.
+        </h1>
+        <p class="text-base sm:text-lg text-neutral-600 max-w-xl mx-auto leading-relaxed mb-10">
+            Consultez le calendrier des séminaires de la Faculté des Sciences, réservez votre place en un clic et récupérez votre badge d'accès QR.
+        </p>
+        <div class="flex items-center justify-center gap-4">
+            <a href="/login.html" class="bg-[#002B7F] hover:bg-[#001F5C] text-white text-sm font-medium px-7 py-3.5 rounded-lg transition">
+                Accéder à la plateforme
+            </a>
+            <button onclick="openAboutModal()" class="bg-white hover:bg-neutral-100 text-neutral-800 border border-neutral-200 text-sm font-medium px-7 py-3.5 rounded-lg transition">
+                À propos du projet
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer (Only on Welcome Screen) -->
+    <footer class="w-full max-w-5xl mx-auto px-6 py-8 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-500 gap-2">
+        <span>Université Ibn Tofaïl — Faculté des Sciences Kénitra</span>
+        <span>Réalisé par <strong class="text-neutral-800 font-semibold">Mohammed NASSIRI (Master GLCC)</strong></span>
+    </footer>
+
+    <!-- About Modal (With profile.jpg) -->
+    <div id="aboutModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+        <div class="bg-white border border-neutral-200 rounded-2xl max-w-sm w-full p-8 text-center shadow-xl relative">
+            <button onclick="closeAboutModal()" class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-800 text-xl leading-none">&times;</button>
+            
+            <img src="/profile.png" alt="Mohammed NASSIRI" class="w-24 h-24 rounded-full object-cover mx-auto mb-4 border border-neutral-200 bg-neutral-100">
+            
+            <h3 class="text-lg font-bold text-neutral-900">Mohammed NASSIRI</h3>
+            <p class="text-xs font-semibold text-[#002B7F] uppercase tracking-wider mt-1">Master GLCC</p>
+            <p class="text-xs text-neutral-500 mt-0.5">Génie Logiciel pour le Cloud Computing</p>
+
+            <div class="border-t border-neutral-100 my-5"></div>
+
+            <p class="text-sm text-neutral-600 leading-relaxed">
+                Projet réalisé dans le cadre du module <strong>Java / J2EE</strong> à l'Université Ibn Tofaïl (Faculté des Sciences, Kénitra).
+            </p>
+            <p class="text-xs text-neutral-400 mt-3">
+                Stack : Spring Boot 3 • Spring Data JPA • H2 Database • REST API
+            </p>
+
+            <button onclick="closeAboutModal()" class="mt-6 w-full bg-neutral-900 hover:bg-neutral-800 text-white text-sm font-medium py-2.5 rounded-lg transition">
+                Fermer
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function openAboutModal() {
+            const m = document.getElementById('aboutModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+        function closeAboutModal() {
+            const m = document.getElementById('aboutModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
