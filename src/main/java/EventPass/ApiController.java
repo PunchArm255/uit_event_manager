@@ -26,7 +26,7 @@ public class ApiController {
     public void seedData() {
         if (userRepo.count() == 0) {
             userRepo.save(new User(
-                    "Pr. Admin UIT (Département Info)",
+                    "Pr. Admin (Département Info)",
                     "admin@uit.ac.ma",
                     "admin123",
                     "ADMIN",
@@ -36,7 +36,26 @@ public class ApiController {
                     "mohammed.nassiri@uit.ac.ma",
                     "student123",
                     "STUDENT",
-                    "M-CLOUD-2026"));
+                    "GLCC-2026"));
+        } else {
+            userRepo.findByEmailIgnoreCase("admin@uit.ac.ma").ifPresent(u -> {
+                if (u.getFullName() != null && u.getFullName().contains("UIT")) {
+                    u.setFullName("Pr. Admin (Département Info)");
+                    userRepo.save(u);
+                }
+            });
+            userRepo.findByEmailIgnoreCase("mohammed.nassiri@uit.ac.ma").ifPresent(u -> {
+                if ("M-CLOUD-2026".equalsIgnoreCase(u.getStudentId())) {
+                    u.setStudentId("GLCC-2026");
+                    userRepo.save(u);
+                }
+            });
+            regRepo.findAll().forEach(r -> {
+                if ("M-CLOUD-2026".equalsIgnoreCase(r.getStudentId())) {
+                    r.setStudentId("GLCC-2026");
+                    regRepo.save(r);
+                }
+            });
         }
 
         if (eventRepo.count() == 0) {
@@ -44,33 +63,68 @@ public class ApiController {
                     "Journée Cloud Native, Kubernetes & Microservices",
                     "24 Nov 2026 • 09:00",
                     "Amphi Central — Faculté des Sciences, Kénitra",
-                    "MASTER CLOUD & J2EE",
-                    120));
+                    "Cloud & DevOps",
+                    120,
+                    "blue"));
             Event e2 = eventRepo.save(new Event(
                     "Séminaire IA Générative & Architectures Distribuées",
                     "02 Déc 2026 • 14:30",
                     "Centre de Conférences — Université Ibn Tofaïl",
-                    "RECHERCHE & IA",
-                    80));
+                    "Intelligence Artificielle",
+                    80,
+                    "purple"));
             Event e3 = eventRepo.save(new Event(
                     "Forum Entreprises, Cloud & Stages PFE 2026",
                     "15 Déc 2026 • 09:30",
                     "Hall Principal — Campus Universitaire UIT Kénitra",
-                    "CARRIÈRE & PFE",
-                    250));
+                    "Forum & Carrière",
+                    250,
+                    "amber"));
             Event e4 = eventRepo.save(new Event(
                     "Workshop DevSecOps & Automatisation CI/CD",
                     "22 Déc 2026 • 10:00",
                     "Salle TP B4 — Département d'Informatique",
-                    "WORKSHOP PRATIQUE",
-                    40));
+                    "Workshop & Atelier",
+                    40,
+                    "emerald"));
 
-            regRepo.save(new Registration("Mohammed Nassiri", "mohammed.nassiri@uit.ac.ma", "Master Cloud Engineering",
-                    "M-CLOUD-2026", e1));
-            regRepo.save(new Registration("Yassine Esserdaoui", "yassine.e@uit.ac.ma", "Master Cloud Engineering",
-                    "M-CLOUD-2029", e1));
+            regRepo.save(new Registration("Mohammed Nassiri", "mohammed.nassiri@uit.ac.ma", "Master GLCC",
+                    "GLCC-2026", e1));
+            regRepo.save(new Registration("Yassine Esserdaoui", "yassine.e@uit.ac.ma", "Master GLCC",
+                    "GLCC-2029", e1));
             regRepo.save(new Registration("Salma El Amrani", "salma.elamrani@uit.ac.ma", "Doctorante Labo Info",
                     "DOC-UIT-104", e2));
+        } else {
+            // Auto-migrate legacy categories to streamlined academic categories and assign colors
+            eventRepo.findAll().forEach(ev -> {
+                boolean changed = false;
+                if ("MASTER CLOUD & J2EE".equalsIgnoreCase(ev.getCategory())) {
+                    ev.setCategory("Cloud & DevOps");
+                    changed = true;
+                } else if ("RECHERCHE & IA".equalsIgnoreCase(ev.getCategory())) {
+                    ev.setCategory("Intelligence Artificielle");
+                    changed = true;
+                } else if ("CARRIÈRE & PFE".equalsIgnoreCase(ev.getCategory())) {
+                    ev.setCategory("Forum & Carrière");
+                    changed = true;
+                } else if ("WORKSHOP PRATIQUE".equalsIgnoreCase(ev.getCategory())) {
+                    ev.setCategory("Workshop & Atelier");
+                    changed = true;
+                }
+
+                if (ev.getColor() == null || ev.getColor().isBlank()) {
+                    if (ev.getCategory().contains("Cloud")) ev.setColor("blue");
+                    else if (ev.getCategory().contains("Intelligence") || ev.getCategory().contains("IA")) ev.setColor("purple");
+                    else if (ev.getCategory().contains("Carrière") || ev.getCategory().contains("Forum")) ev.setColor("amber");
+                    else if (ev.getCategory().contains("Workshop")) ev.setColor("emerald");
+                    else ev.setColor("blue");
+                    changed = true;
+                }
+
+                if (changed) {
+                    eventRepo.save(ev);
+                }
+            });
         }
     }
 
@@ -89,7 +143,7 @@ public class ApiController {
     @PostMapping("/auth/signup")
     public User signup(@RequestBody User newUser) {
         if (userRepo.findByEmailIgnoreCase(newUser.getEmail()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cet email UIT est déjà inscrit");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cet email est déjà associé à un compte étudiant.");
         }
         newUser.setRole("STUDENT");
         if (newUser.getStudentId() == null || newUser.getStudentId().isBlank()) {
@@ -107,6 +161,9 @@ public class ApiController {
 
     @PostMapping("/events")
     public Event createEvent(@RequestBody Event event) {
+        if (event.getColor() == null || event.getColor().isBlank()) {
+            event.setColor("blue");
+        }
         return eventRepo.save(event);
     }
 
@@ -142,7 +199,7 @@ public class ApiController {
             return existing.get(); // Return their existing badge seamlessly
         }
 
-        String role = (req.getRole() == null || req.getRole().isBlank()) ? "Master Cloud Engineering" : req.getRole();
+        String role = (req.getRole() == null || req.getRole().isBlank()) ? "Master GLCC" : req.getRole();
         String studentId = (req.getStudentId() == null || req.getStudentId().isBlank()) ? "UIT-ETU"
                 : req.getStudentId();
 
@@ -155,6 +212,33 @@ public class ApiController {
     public Registration verifyAndCheckIn(@PathVariable String badgeCode) {
         Registration reg = regRepo.findByBadgeCodeIgnoreCase(badgeCode.trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Badge invalide ou introuvable"));
+        reg.setCheckedIn(true);
+        return regRepo.save(reg);
+    }
+
+    // Admin Invalidate Presence by Badge Code
+    @PostMapping("/badges/invalidate/{badgeCode}")
+    public Registration invalidatePresenceByCode(@PathVariable String badgeCode) {
+        Registration reg = regRepo.findByBadgeCodeIgnoreCase(badgeCode.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Badge invalide ou introuvable"));
+        reg.setCheckedIn(false);
+        return regRepo.save(reg);
+    }
+
+    // Admin Invalidate Presence by Registration ID
+    @PostMapping("/registrations/{id}/invalidate")
+    public Registration invalidatePresenceById(@PathVariable Long id) {
+        Registration reg = regRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscription introuvable"));
+        reg.setCheckedIn(false);
+        return regRepo.save(reg);
+    }
+
+    // Admin Validate / Check-in Presence by Registration ID
+    @PostMapping("/registrations/{id}/checkin")
+    public Registration checkinPresenceById(@PathVariable Long id) {
+        Registration reg = regRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inscription introuvable"));
         reg.setCheckedIn(true);
         return regRepo.save(reg);
     }

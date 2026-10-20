@@ -14,17 +14,23 @@ public class Event {
     private String location;
     private String category;
     private int capacity;
+    private String color;
 
     // Empty constructor required by JPA
     public Event() {
     }
 
     public Event(String title, String date, String location, String category, int capacity) {
+        this(title, date, location, category, capacity, "blue");
+    }
+
+    public Event(String title, String date, String location, String category, int capacity, String color) {
         this.title = title;
         this.date = date;
         this.location = location;
         this.category = category;
         this.capacity = capacity;
+        this.color = (color == null || color.isBlank()) ? "blue" : color;
     }
 
     // Getters and Setters (Java requires these to convert your object to JSON)
@@ -74,5 +80,13 @@ public class Event {
 
     public void setCapacity(int capacity) {
         this.capacity = capacity;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 }
