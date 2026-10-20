@@ -62,12 +62,7 @@ npm run build
 
 ## Demo Accounts
 
-The login screen includes quick 1-click credentials for testing and evaluation:
-
-| Role | Email | Password | Identifier |
-|---|---|---|---|
-| **Student** | `mohammed.nassiri@uit.ac.ma` | `student123` | Mohammed NASSIRI (`GLCC-2026`) |
-| **Admin** | `admin@uit.ac.ma` | `admin123` | Pr. Admin (Département Info) |
+The login screen includes quick 1-click credentials for testing and evaluation.
 
 ---
 
