@@ -1,5 +1,7 @@
 # UIT Event Manager
 
+<img width="1431" height="707" alt="Screenshot 2026-10-20 at 6 16 19 PM" src="https://github.com/user-attachments/assets/384230f2-b2b2-4b41-9ff2-8802fdac6b0a" />
+
 A minimalist academic event management and QR badge platform built for **Ibn Tofaïl University (Faculty of Sciences, Kénitra)**.
 
 Developed for the **J2E** course under Master **GLCC** (*Software Engineering for Cloud Computing*).
